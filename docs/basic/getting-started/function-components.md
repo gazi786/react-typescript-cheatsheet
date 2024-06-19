@@ -15,17 +15,25 @@ type AppProps = {
 const App = ({ message }: AppProps) => <div>{message}</div>;
 
 // you can choose annotate the return type so an error is raised if you accidentally return some other type
-const App = ({ message }: AppProps): JSX.Element => <div>{message}</div>;
+const App = ({ message }: AppProps): React.JSX.Element => <div>{message}</div>;
 
 // you can also inline the type declaration; eliminates naming the prop types, but looks repetitive
 const App = ({ message }: { message: string }) => <div>{message}</div>;
+
+// Alternatively, you can use `React.FunctionComponent` (or `React.FC`), if you prefer.
+// With latest React types and TypeScript 5.1. it's mostly a stylistic choice, otherwise discouraged.
+const App: React.FunctionComponent<{ message: string }> = ({ message }) => (
+  <div>{message}</div>
+);
+// or
+const App: React.FC<AppProps> = ({ message }) => <div>{message}</div>;
 ```
 
 > Tip: You might use [Paul Shen's VS Code Extension](https://marketplace.visualstudio.com/items?itemName=paulshen.paul-typescript-toolkit) to automate the type destructure declaration (incl a [keyboard shortcut](https://twitter.com/_paulshen/status/1392915279466745857?s=20)).
 
 <details>
 
-<summary><b>Why is <code>React.FC</code> discouraged? What about <code>React.FunctionComponent</code>/<code>React.VoidFunctionComponent</code>?</b></summary>
+<summary><b>Why is <code>React.FC</code> not needed? What about <code>React.FunctionComponent</code>/<code>React.VoidFunctionComponent</code>?</b></summary>
 
 You may see this in many React+TypeScript codebases:
 
@@ -35,7 +43,7 @@ const App: React.FunctionComponent<{ message: string }> = ({ message }) => (
 );
 ```
 
-However, the general consensus today is that `React.FunctionComponent` (or the shorthand `React.FC`) is [discouraged](https://github.com/facebook/create-react-app/pull/8177). This is a nuanced opinion of course, but if you agree and want to remove `React.FC` from your codebase, you can use [this jscodeshift codemod](https://github.com/gndelia/codemod-replace-react-fc-typescript).
+However, the general consensus today is that `React.FunctionComponent` (or the shorthand `React.FC`) is not needed. If you're still using React 17 or TypeScript lower than 5.1, it is even [discouraged](https://github.com/facebook/create-react-app/pull/8177). This is a nuanced opinion of course, but if you agree and want to remove `React.FC` from your codebase, you can use [this jscodeshift codemod](https://github.com/gndelia/codemod-replace-react-fc-typescript).
 
 Some differences from the "normal function" version:
 
@@ -97,37 +105,5 @@ const VoidFunctionComponent: React.VoidFunctionComponent<Props> = ({
 - _In the future_, it may automatically mark props as `readonly`, though that's a moot point if the props object is destructured in the parameter list.
 
 In most cases it makes very little difference which syntax is used, but you may prefer the more explicit nature of `React.FunctionComponent`.
-
-</details>
-
-<details>
-<summary><b>Minor Pitfalls</b></summary>
-
-These patterns are not supported:
-
-**Conditional rendering**
-
-```tsx
-const MyConditionalComponent = ({ shouldRender = false }) =>
-  shouldRender ? <div /> : false; // don't do this in JS either
-const el = <MyConditionalComponent />; // throws an error
-```
-
-This is because due to limitations in the compiler, function components cannot return anything other than a JSX expression or `null`, otherwise it complains with a cryptic error message saying that the other type is not assignable to `Element`.
-
-**Array.fill**
-
-```tsx
-const MyArrayComponent = () => Array(5).fill(<div />);
-const el2 = <MyArrayComponent />; // throws an error
-```
-
-Unfortunately just annotating the function type will not help so if you really need to return other exotic types that React supports, you'd need to perform a type assertion:
-
-```tsx
-const MyArrayComponent = () => Array(5).fill(<div />) as any as JSX.Element;
-```
-
-[See commentary by @ferdaber here](https://github.com/typescript-cheatsheets/react/issues/57).
 
 </details>

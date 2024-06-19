@@ -160,7 +160,7 @@ React has documentation for [how to start a new React project](https://react.dev
 - [Next.js](https://nextjs.org/docs/basic-features/typescript): `npx create-next-app@latest --ts`
 - [Remix](https://remix.run/docs/tutorials/blog): `npx create-remix@latest`
 - [Gatsby](https://www.gatsbyjs.com/docs/how-to/custom-configuration/typescript/): `npm init gatsby --ts`
-- [Expo](https://docs.expo.dev/guides/typescript/): `npx create-react-native-app -t with-typescript`
+- [Expo](https://docs.expo.dev/guides/typescript/): `npx create-expo-app -t with-typescript`
 
 #### Try React and TypeScript online
 
@@ -190,17 +190,25 @@ type AppProps = {
 const App = ({ message }: AppProps) => <div>{message}</div>;
 
 // you can choose annotate the return type so an error is raised if you accidentally return some other type
-const App = ({ message }: AppProps): JSX.Element => <div>{message}</div>;
+const App = ({ message }: AppProps): React.JSX.Element => <div>{message}</div>;
 
 // you can also inline the type declaration; eliminates naming the prop types, but looks repetitive
 const App = ({ message }: { message: string }) => <div>{message}</div>;
+
+// Alternatively, you can use `React.FunctionComponent` (or `React.FC`), if you prefer.
+// With latest React types and TypeScript 5.1. it's mostly a stylistic choice, otherwise discouraged.
+const App: React.FunctionComponent<{ message: string }> = ({ message }) => (
+  <div>{message}</div>
+);
+// or
+const App: React.FC<AppProps> = ({ message }) => <div>{message}</div>;
 ```
 
 > Tip: You might use [Paul Shen's VS Code Extension](https://marketplace.visualstudio.com/items?itemName=paulshen.paul-typescript-toolkit) to automate the type destructure declaration (incl a [keyboard shortcut](https://twitter.com/_paulshen/status/1392915279466745857?s=20)).
 
 <details>
 
-<summary><b>Why is <code>React.FC</code> discouraged? What about <code>React.FunctionComponent</code>/<code>React.VoidFunctionComponent</code>?</b></summary>
+<summary><b>Why is <code>React.FC</code> not needed? What about <code>React.FunctionComponent</code>/<code>React.VoidFunctionComponent</code>?</b></summary>
 
 You may see this in many React+TypeScript codebases:
 
@@ -210,7 +218,7 @@ const App: React.FunctionComponent<{ message: string }> = ({ message }) => (
 );
 ```
 
-However, the general consensus today is that `React.FunctionComponent` (or the shorthand `React.FC`) is [discouraged](https://github.com/facebook/create-react-app/pull/8177). This is a nuanced opinion of course, but if you agree and want to remove `React.FC` from your codebase, you can use [this jscodeshift codemod](https://github.com/gndelia/codemod-replace-react-fc-typescript).
+However, the general consensus today is that `React.FunctionComponent` (or the shorthand `React.FC`) is not needed. If you're still using React 17 or TypeScript lower than 5.1, it is even [discouraged](https://github.com/facebook/create-react-app/pull/8177). This is a nuanced opinion of course, but if you agree and want to remove `React.FC` from your codebase, you can use [this jscodeshift codemod](https://github.com/gndelia/codemod-replace-react-fc-typescript).
 
 Some differences from the "normal function" version:
 
@@ -272,38 +280,6 @@ const VoidFunctionComponent: React.VoidFunctionComponent<Props> = ({
 - _In the future_, it may automatically mark props as `readonly`, though that's a moot point if the props object is destructured in the parameter list.
 
 In most cases it makes very little difference which syntax is used, but you may prefer the more explicit nature of `React.FunctionComponent`.
-
-</details>
-
-<details>
-<summary><b>Minor Pitfalls</b></summary>
-
-These patterns are not supported:
-
-**Conditional rendering**
-
-```tsx
-const MyConditionalComponent = ({ shouldRender = false }) =>
-  shouldRender ? <div /> : false; // don't do this in JS either
-const el = <MyConditionalComponent />; // throws an error
-```
-
-This is because due to limitations in the compiler, function components cannot return anything other than a JSX expression or `null`, otherwise it complains with a cryptic error message saying that the other type is not assignable to `Element`.
-
-**Array.fill**
-
-```tsx
-const MyArrayComponent = () => Array(5).fill(<div />);
-const el2 = <MyArrayComponent />; // throws an error
-```
-
-Unfortunately just annotating the function type will not help so if you really need to return other exotic types that React supports, you'd need to perform a type assertion:
-
-```tsx
-const MyArrayComponent = () => Array(5).fill(<div />) as any as JSX.Element;
-```
-
-[See commentary by @ferdaber here](https://github.com/typescript-cheatsheets/react/issues/57).
 
 </details>
 
@@ -947,11 +923,11 @@ let el = <Greet age={3} />;
 ```
 
 <details>
-<summary><b><code>JSX.LibraryManagedAttributes</code> nuance for library authors</b></summary>
+<summary><b><code>React.JSX.LibraryManagedAttributes</code> nuance for library authors</b></summary>
 
 The above implementations work fine for App creators, but sometimes you want to be able to export `GreetProps` so that others can consume it. The problem here is that the way `GreetProps` is defined, `age` is a required prop when it isn't because of `defaultProps`.
 
-The insight to have here is that [`GreetProps` is the _internal_ contract for your component, not the _external_, consumer facing contract](https://github.com/typescript-cheatsheets/react/issues/66#issuecomment-453878710). You could create a separate type specifically for export, or you could make use of the `JSX.LibraryManagedAttributes` utility:
+The insight to have here is that [`GreetProps` is the _internal_ contract for your component, not the _external_, consumer facing contract](https://github.com/typescript-cheatsheets/react/issues/66#issuecomment-453878710). You could create a separate type specifically for export, or you could make use of the `React.JSX.LibraryManagedAttributes` utility:
 
 ```tsx
 // internal contract, should not be exported out
@@ -964,7 +940,7 @@ class Greet extends Component<GreetProps> {
 }
 
 // external contract
-export type ApparentGreetProps = JSX.LibraryManagedAttributes<
+export type ApparentGreetProps = React.JSX.LibraryManagedAttributes<
   typeof Greet,
   GreetProps
 >;
@@ -1004,13 +980,13 @@ const el = <TestComponent name="foo" />;
 
 ##### Solution
 
-Define a utility that applies `JSX.LibraryManagedAttributes`:
+Define a utility that applies `React.JSX.LibraryManagedAttributes`:
 
 ```tsx
 type ComponentProps<T> = T extends
   | React.ComponentType<infer P>
   | React.Component<infer P>
-  ? JSX.LibraryManagedAttributes<T, P>
+  ? React.JSX.LibraryManagedAttributes<T, P>
   : never;
 
 const TestComponent = (props: ComponentProps<typeof GreetComponent>) => {
@@ -1070,7 +1046,7 @@ export class MyComponent extends React.Component<IMyComponentProps> {
 }
 ```
 
-The problem with this approach is it causes complex issues with the type inference working with `JSX.LibraryManagedAttributes`. Basically it causes the compiler to think that when creating a JSX expression with that component, that all of its props are optional.
+The problem with this approach is it causes complex issues with the type inference working with `React.JSX.LibraryManagedAttributes`. Basically it causes the compiler to think that when creating a JSX expression with that component, that all of its props are optional.
 
 [See commentary by @ferdaber here](https://github.com/typescript-cheatsheets/react/issues/57) and [here](https://github.com/typescript-cheatsheets/react/issues/61).
 
@@ -1169,7 +1145,7 @@ Relevant for components that accept other React components as props.
 ```tsx
 export declare interface AppProps {
   children?: React.ReactNode; // best, accepts everything React can render
-  childrenElement: JSX.Element; // A single React element
+  childrenElement: React.JSX.Element; // A single React element
   style?: React.CSSProperties; // to pass through style props
   onChange?: React.FormEventHandler<HTMLInputElement>; // form events! the generic parameter is the type of event.target
   //  more info: https://react-typescript-cheatsheet.netlify.app/docs/advanced/patterns_by_usecase/#wrappingmirroring
@@ -1205,16 +1181,16 @@ This is because `ReactNode` includes `ReactFragment` which allowed type `{}` bef
 </details>
 
 <details>
- <summary><b>JSX.Element vs React.ReactNode?</b></summary>
+ <summary><b>React.JSX.Element vs React.ReactNode?</b></summary>
 
-Quote [@ferdaber](https://github.com/typescript-cheatsheets/react/issues/57): A more technical explanation is that a valid React node is not the same thing as what is returned by `React.createElement`. Regardless of what a component ends up rendering, `React.createElement` always returns an object, which is the `JSX.Element` interface, but `React.ReactNode` is the set of all possible return values of a component.
+Quote [@ferdaber](https://github.com/typescript-cheatsheets/react/issues/57): A more technical explanation is that a valid React node is not the same thing as what is returned by `React.createElement`. Regardless of what a component ends up rendering, `React.createElement` always returns an object, which is the `React.JSX.Element` interface, but `React.ReactNode` is the set of all possible return values of a component.
 
-- `JSX.Element` -> Return value of `React.createElement`
+- `React.JSX.Element` -> Return value of `React.createElement`
 - `React.ReactNode` -> Return value of a component
 
 </details>
 
-[More discussion: Where ReactNode does not overlap with JSX.Element](https://github.com/typescript-cheatsheets/react/issues/129)
+[More discussion: Where ReactNode does not overlap with React.JSX.Element](https://github.com/typescript-cheatsheets/react/issues/129)
 
 [Something to add? File an issue](https://github.com/typescript-cheatsheets/react/issues/new).
 
@@ -1558,7 +1534,7 @@ const MyComponent = () => {
 };
 ```
 
-However, it would be preferrable to not have to check for `null`, since we know that the context won't be `null`. One way to do that is to provide a custom hook to use the context, where an error is thrown if the context is not provided:
+However, it would be preferable to not have to check for `null`, since we know that the context won't be `null`. One way to do that is to provide a custom hook to use the context, where an error is thrown if the context is not provided:
 
 ```tsx
 import { createContext } from "react";
@@ -1722,7 +1698,7 @@ export function ClickableList<T>(props: ClickableListProps<T>) {
 ##### Option 2 - Redeclare forwardRef
 
 ```ts
-// Redecalare forwardRef
+// Redeclare forwardRef
 declare module "react" {
   function forwardRef<T, P = {}>(
     render: (props: P, ref: React.Ref<T>) => React.ReactElement | null
@@ -1755,6 +1731,22 @@ function ClickableListInner<T>(
 
 export const ClickableList = forwardRef(ClickableListInner);
 ```
+
+##### Option 3 - Call signature
+
+```ts
+// Add to `index.d.ts`
+interface ForwardRefWithGenerics extends React.FC<WithForwardRefProps<Option>> {
+  <T extends Option>(props: WithForwardRefProps<T>): ReturnType<
+    React.FC<WithForwardRefProps<T>>
+  >;
+}
+
+export const ClickableListWithForwardRef: ForwardRefWithGenerics =
+  forwardRef(ClickableList);
+```
+
+Credits: https://stackoverflow.com/a/73795494
 
 #### More Info
 
@@ -1891,7 +1883,7 @@ This example is based on the [Event Bubbling Through Portal](https://reactjs.org
 [React-error-boundary](https://github.com/bvaughn/react-error-boundary) - is a lightweight package ready to use for this scenario with TS support built-in.
 This approach also lets you avoid class components that are not that popular anymore.
 
-##### Options 2: Writing your custom error boundary component
+##### Option 2: Writing your custom error boundary component
 
 If you don't want to add a new npm package for this, you can also write your own `ErrorBoundary` component.
 
@@ -2667,7 +2659,7 @@ Because you don't have to explicitly import this, this is known as an [ambient m
 You can also do ambient variable and ambient type declarations:
 
 ```ts
-// ambient utiltity type
+// ambient utility type
 type ToArray<T> = T extends unknown[] ? T : T[];
 // ambient variable
 declare let process: {
@@ -2843,8 +2835,6 @@ More `.eslintrc.json` options to consider with more options you may want for **a
 }
 ```
 
-You can read a [fuller TypeScript + ESLint setup guide here](https://blog.matterhorn.dev/posts/learn-typescript-linting-part-1/) from Matterhorn, in particular check https://github.com/MatterhornDev/learn-typescript-linting.
-
 Another great resource is ["Using ESLint and Prettier in a TypeScript Project"](https://dev.to/robertcoopercode/using-eslint-and-prettier-in-a-typescript-project-53jb) by @robertcoopercode.
 
 Wes Bos is also working on [TypeScript support for his eslint+prettier config.](https://github.com/wesbos/eslint-config-wesbos/issues/68)
@@ -2895,7 +2885,16 @@ If you're looking for information on Prettier, check out the [Prettier](https://
 ### Recommended React + TypeScript talks
 
 - [Ultimate React Component Patterns with TypeScript](https://www.youtube.com/watch?v=_PBQ3if6Fmg), by Martin Hochel, GeeCon Prague 2018
-- Please help contribute this new section!
+- [How to Build React Apps with TypeScript](https://youtu.be/LJzGGmu5APA?si=YNzy7T_8yj7TuXxS), by ClearEdge Tech Talk 2022
+- [Create a More Readable React Codebase Using TypeScript](https://youtu.be/nkJbGgieALI?si=IFZZIMEiXz7AsiBv), by Emma Brillhart 2019
+- [Advanced TypeScript with React](https://youtu.be/zQfD4ZxxyKA?si=FmrgOq667svX6C9O), by Nikhil Verma 2019
+- [Senior Typescript Features You don't Know About - clean-code](https://www.youtube.com/watch?v=Y4u97vJqmhM), by CoderOne 2023
+- [React & TypeScript - Course for Beginners](https://www.youtube.com/watch?v=FJDVKeh7RJI), by FreeCodeCamp 2022
+- [TypeScript + React](https://www.youtube.com/watch?v=1ZnrX3wiNTU), by Chris Toomey 2019
+- [Mastering React Hooks](https://www.youtube.com/watch?v=zM_ZiSl2n2E), by Jack Herrington 2021
+- [Using Hooks and codegen](https://www.youtube.com/watch?v=cdsnzfJUqm0) by Tejas Kumar 2019
+
+- Please help contribute to this new section!
 
 <!--END-SECTION:talks-->
 

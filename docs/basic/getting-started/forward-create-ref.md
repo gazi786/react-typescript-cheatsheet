@@ -95,7 +95,7 @@ export function ClickableList<T>(props: ClickableListProps<T>) {
 ### Option 2 - Redeclare forwardRef
 
 ```ts
-// Redecalare forwardRef
+// Redeclare forwardRef
 declare module "react" {
   function forwardRef<T, P = {}>(
     render: (props: P, ref: React.Ref<T>) => React.ReactElement | null
@@ -128,6 +128,22 @@ function ClickableListInner<T>(
 
 export const ClickableList = forwardRef(ClickableListInner);
 ```
+
+### Option 3 - Call signature
+
+```ts
+// Add to `index.d.ts`
+interface ForwardRefWithGenerics extends React.FC<WithForwardRefProps<Option>> {
+  <T extends Option>(props: WithForwardRefProps<T>): ReturnType<
+    React.FC<WithForwardRefProps<T>>
+  >;
+}
+
+export const ClickableListWithForwardRef: ForwardRefWithGenerics =
+  forwardRef(ClickableList);
+```
+
+Credits: https://stackoverflow.com/a/73795494
 
 ## More Info
 

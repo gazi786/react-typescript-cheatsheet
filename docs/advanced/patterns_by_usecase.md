@@ -35,9 +35,7 @@ export function Button(props: ButtonProps) {
 
 [_See this in the TS Playground_](https://www.typescriptlang.org/play?#code/JYWwDg9gTgLgBAKjgQwM5wEoFNkGN4BmUEIcA5FDvmQNwCwAUI4wPQtwCuqyA5lowQ4A7fMAhC4AQTBgAFAEo4Ab0Zw4bOABUAnmCzkARAQgQDZOMHRCI8NKmA8hyAEYAbfTAhwYu-WQPOHDCeQgZwAD5wBqgcziDAMGGRBpSoWIkRnEIAJlgEwEJY2WQAdLIATADM5eXyqurslDAcUBIAPABCQSHevgC8RiYGAHxwqK7ZANYAVnBtLF3B4sP19RrWcFhQxFD1TS3tiz0+egOBS6GjMFgAHvDzR8uMAL7MDBqgYO4gWEIwyDAxEJGLdILALH8tgQ8PpHkIAArEMDoW7XHLobB4GAlADCJEghT+iIgyLaZHOITIoxUDDUqD0uGAyFcxLAAH4AFxjGBQAo8egMV4MUHQQjCUTiOBw2RgJGoLlw1moRQ0tS4cSoeBKMYMpkspEAGjgJRNqXgzzgfTgspJqAFag02S8qBI6QAFny4AB3BJunVYRnM1l7dIHOYUyVKE0lM0WljDAXPIA)
 
-**Forwarding Refs**: As [the React docs themselves note](https://reactjs.org/docs/forwarding-refs.html), most usecases will not need to obtain a ref to the inner element. But for people making reusable component libraries, you will need to `forwardRef` the underlying element, and then you can use `ComponentPropsWithRef` to grab props for your wrapper component. Check [our docs on forwarding Refs](https://react-typescript-cheatsheet.netlify.app/docs/basic/getting-started/forward_and_create_ref/) for more.
-
-In future, the need to `forwardRef` may go away in React 17+, but for now we still have to deal with this. 🙃
+**Forwarding Refs**: Most use cases will not need to obtain a ref to the inner element. When building reusable component libraries, however, `forwardRef` is often needed for exposing the underlying DOM node of an inner component to a parent component. Then you can use `ComponentPropsWithRef` to grab props for your wrapper component. Check [our docs on forwarding Refs](https://react-typescript-cheatsheet.netlify.app/docs/basic/getting-started/forward_and_create_ref/) for more.
 
 <details>
 <summary>
@@ -52,20 +50,20 @@ You CAN use `ComponentProps` in place of `ComponentPropsWithRef`, but you may pr
 
 More info: https://react-typescript-cheatsheet.netlify.app/docs/basic/getting-started/forward_and_create_ref/
 
-### Maybe `JSX.IntrinsicElements` or `[Element]HTMLAttributes`
+### Maybe `React.JSX.IntrinsicElements` or `[Element]HTMLAttributes`
 
 There are at least 2 other equivalent ways to do this, but they are more verbose:
 
 ```tsx
-// Method 1: JSX.IntrinsicElements
-type BtnType = JSX.IntrinsicElements["button"]; // cannot inline or will error
+// Method 1: React.JSX.IntrinsicElements
+type BtnType = React.JSX.IntrinsicElements["button"]; // cannot inline or will error
 export interface ButtonProps extends BtnType {} // etc
 
 // Method 2: React.[Element]HTMLAttributes
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
 ```
 
-Looking at [the source for `ComponentProps`](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/f3134f4897c8473f590cbcdd5788da8d59796f45/types/react/index.d.ts#L821) shows that this is a clever wrapper for `JSX.IntrinsicElements`, whereas the second method relies on specialized interfaces with unfamiliar naming/capitalization.
+Looking at [the source for `ComponentProps`](https://github.com/DefinitelyTyped/DefinitelyTyped/blob/f3134f4897c8473f590cbcdd5788da8d59796f45/types/react/index.d.ts#L821) shows that this is a clever wrapper for `React.JSX.IntrinsicElements`, whereas the second method relies on specialized interfaces with unfamiliar naming/capitalization.
 
 > Note: There are over 50 of these specialized interfaces available - look for `HTMLAttributes` in our [`@types/react` commentary](https://react-typescript-cheatsheet.netlify.app/docs/advanced/types_react_api#typesreact).
 
@@ -168,32 +166,7 @@ export const FancyButton = forwardRef<Ref, Props>((props, ref) => (
     {props.children}
   </button>
 ));
-
-// second layer button, no need for forwardRef (TODO: doublecheck this)
-export interface DoubleWrappedProps
-  extends React.ComponentPropsWithRef<typeof FancyButton> {
-  specialProp?: string;
-}
-export function DoubleWrappedButton(props: DoubleWrappedProps) {
-  const { specialProp, ref, ...rest } = props;
-  return <button ref={ref} {...rest} />;
-}
-
-// usage
-import { useRef } from "react";
-
-function App() {
-  const btnRef = useRef<HTMLButtonElement>(null!);
-  return (
-    <DoubleWrappedButton type="button" ref={btnRef}>
-      {" "}
-      text{" "}
-    </DoubleWrappedButton>
-  );
-}
 ```
-
-_[TS Playground link](https://www.typescriptlang.org/play?#code/JYWwDg9gTgLgBAKjgQwM5wEoFNkGN4BmUEIcA5FDvmQNwCwAUIwPTNwBGaWHArjDBAB2AGjgB3YDAAWcSgTgFoY5FAAmwQQHNGMAJ5huABWJh0AXjgBvOLinAANqsqCAXJiowAdNjwwAchCqWDRwegZuAESoPOwgkhFwAD5wEex8AoIJAL70DFgAHpCwofrc2PIWABIAKgCyADIAQulCAKL2WCBYgjC5BUXwuEKo8ABiyIK4us38QnAWPvieilDKauUAPOWixhCmAHwAFIdgJqiicgCU8-twh4xwcBtps4KyWARmlnJZNvZoqD8yC6ZgitV0AGF-qhAcCsAkwlgvqc9qhPIisvsHo8rCjTJ5bA4nN0stiNswXhksQxLpdcowWGxUFghoJVHB-rosFBeK9GP1oPANDBuQQ8NwACIQGIdADqUGQYAMql2pjgBRFbPQiy8EJIkEE3RgqtQsskUk2iIg8nGk2mLUEt0s2NQBlwwGQ9lVAH43CMoBpNLlSXlCoKFDxJjBgHMpTKsPLFcqZhkTmc3HH2HKFUqsCqztdnQxHqyRlY4K6WR6vSYLh9RJ5G5Qy78LHjULlHpQYDwoG9ng73p9vh9fpZG55mzBfsx9sGGQxWHAeKhkJosIwCJH8DG3gBBJWHQvY0vwdgwQTlebuXyeFdYTY1BoptodLo9I6CHj2ewAQku2Ldr2-aZtmSZ5i+byIqClJCAkchfOel6jrcIr5PA5KgQmObJg61IhkAA)_
 
 ## Polymorphic Components (e.g. with `as` props)
 
@@ -373,8 +346,8 @@ You can type the **structure** of your children: just one child, or a tuple of c
 The following are valid:
 
 ```ts
-type OneChild = React.ReactElement;
-type TwoChildren = [React.ReactElement, React.ReactElement];
+type OneChild = React.ReactNode;
+type TwoChildren = [React.ReactNode, React.ReactNode];
 type ArrayOfProps = SomeProp[];
 type NumbersChildren = number[];
 type TwoNumbersChildren = [number, number];
@@ -402,7 +375,7 @@ Parent.propTypes = {
 
 The thing you cannot do is **specify which components** the children are, e.g. If you want to express the fact that "React Router `<Routes>` can only have `<Route>` as children, nothing else is allowed" in TypeScript.
 
-This is because when you write a JSX expression (`const foo = <MyComponent foo='foo' />`), the resultant type is blackboxed into a generic JSX.Element type. (_[thanks @ferdaber](https://github.com/typescript-cheatsheets/react/issues/271)_)
+This is because when you write a JSX expression (`const foo = <MyComponent foo='foo' />`), the resultant type is blackboxed into a generic React.JSX.Element type. (_[thanks @ferdaber](https://github.com/typescript-cheatsheets/react/issues/271)_)
 
 ## Type Narrowing based on Props
 
@@ -441,8 +414,8 @@ type AnchorProps = React.AnchorHTMLAttributes<HTMLAnchorElement> & {
 
 // Input/output options
 type Overload = {
-  (props: ButtonProps): JSX.Element;
-  (props: AnchorProps): JSX.Element;
+  (props: ButtonProps): React.JSX.Element;
+  (props: AnchorProps): React.JSX.Element;
 };
 
 // Guard to check if href exists in props
@@ -465,8 +438,8 @@ Components, and JSX in general, are analogous to functions. When a component can
 A very common use case for this is to render something as either a button or an anchor, based on if it receives a `href` attribute.
 
 ```tsx
-type ButtonProps = JSX.IntrinsicElements["button"];
-type AnchorProps = JSX.IntrinsicElements["a"];
+type ButtonProps = React.JSX.IntrinsicElements["button"];
+type AnchorProps = React.JSX.IntrinsicElements["a"];
 
 // optionally use a custom type guard
 function isPropsForAnchorElement(
@@ -487,7 +460,9 @@ function Clickable(props: ButtonProps | AnchorProps) {
 They don't even need to be completely different props, as long as they have at least one difference in properties:
 
 ```tsx
-type LinkProps = Omit<JSX.IntrinsicElements["a"], "href"> & { to?: string };
+type LinkProps = Omit<React.JSX.IntrinsicElements["a"], "href"> & {
+  to?: string;
+};
 
 function RouterLink(props: LinkProps | AnchorProps) {
   if ("href" in props) {
@@ -835,8 +810,8 @@ type NoTruncateProps = CommonProps & { truncate?: false };
 type TruncateProps = CommonProps & { truncate: true; expanded?: boolean };
 
 // Function overloads to accept both prop types NoTruncateProps & TruncateProps
-function Text(props: NoTruncateProps): JSX.Element;
-function Text(props: TruncateProps): JSX.Element;
+function Text(props: NoTruncateProps): React.JSX.Element;
+function Text(props: TruncateProps): React.JSX.Element;
 function Text(props: CommonProps & { truncate?: boolean; expanded?: boolean }) {
   const { children, truncate, expanded, ...otherProps } = props;
   const classNames = truncate ? ".truncate" : "";
